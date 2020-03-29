@@ -41,9 +41,9 @@ Resources:
           CidrIp: 0.0.0.0/0
       SecurityGroupEgress:
         - IpProtocol: tcp
-            FromPort: 80
-            ToPort: 80
-            CidrIp: 0.0.0.0/0
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
   LoadBalancerTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -91,9 +91,10 @@ Resources:
   LaunchConfiguration:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
-      SecurityGroups: !Ref LoadBalancerSecurityGroup
-      ImageId: ami-010a96c958f9ee5cf #ami-07eda9385feb1e969
-      InstanceType: t3.small #t2.micro
+      SecurityGroups:
+        - Ref: LoadBalancerSecurityGroup
+      ImageId: ami-07eda9385feb1e969
+      InstanceType: t2.micro
       IamInstanceProfile: !Ref IAMReadOnlyRole
       BlockDeviceMappings:
         - DeviceName: "/dev/sdk"
@@ -119,7 +120,8 @@ Resources:
             !Sub "${EnvironmentName}-PV-NETS"
       MaxSize: !Ref WebHosts
       MinSize: !Ref WebHosts
-      TargetGroupARNs: !Ref LoadBalancerTargetGroup
+      TargetGroupARNs:
+        - Ref: LoadBalancerTargetGroup
   LoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
@@ -149,7 +151,7 @@ Resources:
           TargetGroupArn: !Ref LoadBalancerTargetGroup
       Conditions:
         - Field: path-pattern
-            Values: [/]
+          Values: [/]
   # Bastion Hosts
   BastionHostSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -170,15 +172,16 @@ Resources:
     DependsOn:
       - BastionHostSecurityGroup
     Properties:
-      ImageId: ami-010a96c958f9ee5cf
+      ImageId: ami-07eda9385feb1e969
       InstanceType: t2.micro
       KeyName: !Ref KeyPairBastionHost
       NetworkInterfaces:
         - AssociatePublicIpAddress: true
           DeviceIndex: 0
-          GroupSet: !Ref BastionHostSecurityGroup
+          GroupSet:
+            - Ref: BastionHostSecurityGroup
           SubnetId:
-            Fn::importValue:
+            Fn::ImportValue:
               !Sub "${EnvironmentName}-PB-SN1"
   BastionHost2:
     Type: AWS::EC2::Instance
@@ -186,20 +189,21 @@ Resources:
     DependsOn:
       - BastionHostSecurityGroup
     Properties:
-      ImageId: ami-010a96c958f9ee5cf
-        InstanceType: t2.micro
-        KeyName: private-server-devops
-        NetworkInterfaces:
-          - AssociatePublicIpAddress: true
-            DeviceIndex: 0
-            GroupSet: !Ref BastionHostSecurityGroup
-            SubnetId:
-              Fn::importValue:
-                !Sub "${EnvironmentName}-PB-SN2"
+      ImageId: ami-07eda9385feb1e969
+      InstanceType: t2.micro
+      KeyName: private-server-devops
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          GroupSet:
+            - Ref: BastionHostSecurityGroup
+          SubnetId:
+            Fn::ImportValue:
+              !Sub "${EnvironmentName}-PB-SN2"
 Outputs:
   Udagram:
     Description: Load Balancer DNS name
-    Value: !Join [",",["http://", !GetAtt LoadBalancer.DNSName,]]
+    Value: !Join ["",["http://", !GetAtt LoadBalancer.DNSName,]]
     Export:
       Name: !Sub ${EnvironmentName}-url
   # Optional

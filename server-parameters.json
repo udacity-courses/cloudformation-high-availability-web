@@ -10,5 +10,9 @@
   {
     "ParameterKey": "RemoteAccessCIDR",
     "ParameterValue": "84.17.40.110/32"
+  },
+  {
+    "ParameterKey": "KeyPairBastionHost",
+    "ParameterValue": "bastion-host"
   }
 ]
