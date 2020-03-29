@@ -9,10 +9,6 @@ jobs:
   authenticate:
     runs-on: ubuntu-latest
     steps:
-      - name: cfn-lint
-        uses: scottbrenner/cfn-lint-action@master
-        with:
-          args: "**/*.yaml"
       - name: "Configure AWS Credentials"
         uses: aws-actions/configure-aws-credentials@v1
         with:
