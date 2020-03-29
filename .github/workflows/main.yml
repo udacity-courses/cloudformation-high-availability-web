@@ -19,7 +19,7 @@ jobs:
         uses: aws-actions/aws-cloudformation-github-deploy@v1
         with:
           name: udagram
-          template: network.yaml
+          template: ../network.yaml
           parameter-overrides: EnvironmentName=udagram|VpcCIDR=10.0.0.0/16  
           
         
