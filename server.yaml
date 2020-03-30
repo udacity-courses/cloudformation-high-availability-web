@@ -118,8 +118,8 @@ Resources:
       VPCZoneIdentifier:
         - Fn::ImportValue:
             !Sub "${EnvironmentName}-PV-NETS"
-      MaxSize: !Ref WebHosts
-      MinSize: !Ref WebHosts
+      MaxSize: 4
+      MinSize: 2
       TargetGroupARNs:
         - Ref: LoadBalancerTargetGroup
   LoadBalancer:
