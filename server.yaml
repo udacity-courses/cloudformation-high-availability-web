@@ -22,11 +22,43 @@ Parameters:
     Description: Remote CIDR allowed to access the bastion Hosts
     Type: String
 Resources:
-  IAMReadOnlyRole:
+  # IAM ROLE
+  S3Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "ec2.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM"
+      Path: /
+  RolePolicies:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: "root"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Action:
+              - "s3:Get*"
+              - "s3:List*"
+            Resource: *
+      Roles:
+        - Ref: "S3Role"
+  ProfileWithRole:
     Type: AWS::IAM::InstanceProfile
     Properties:
+      Path: /
       Roles:
-        - UdacityReadOnlyBucket
+        - Ref: "S3Role"
+
   LoadBalancerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -66,6 +98,7 @@ Resources:
       VpcId:
         Fn::ImportValue:
           !Sub "${EnvironmentName}-VPCID"
+      GroupName: Security Group for WebServer internal traffic
       SecurityGroupEgress:
         - IpProtocol: tcp
           FromPort: 0
@@ -92,10 +125,10 @@ Resources:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
       SecurityGroups:
-        - Ref: LoadBalancerSecurityGroup
-      ImageId: ami-07eda9385feb1e969
+        - Ref: WebServerSecurityGroup
+      ImageId: ami-096b8af6e7e8fb927
       InstanceType: t2.micro
-      IamInstanceProfile: !Ref IAMReadOnlyRole
+      IamInstanceProfile: !Ref ProfileWithRole
       BlockDeviceMappings:
         - DeviceName: "/dev/sdk"
           Ebs:
@@ -104,12 +137,11 @@ Resources:
         Fn::Base64: !Sub |
           #!/bin/bash
           apt-get update -y
-          apt-get install unzip awscli -y
-          apt-get install apache2 -y
-          systemctl start apache2.service
+          apt-get install apache2 unzip awscli -y
           cd /var/www/html
           aws s3 cp s3://udacity-demo-1/udacity.zip .
           unzip -o udacity.zip
+          systemctl start apache2.service
 
   AutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
@@ -172,7 +204,7 @@ Resources:
     DependsOn:
       - BastionHostSecurityGroup
     Properties:
-      ImageId: ami-07eda9385feb1e969
+      ImageId: ami-096b8af6e7e8fb927
       InstanceType: t2.micro
       KeyName: !Ref KeyPairBastionHost
       NetworkInterfaces:
@@ -189,7 +221,7 @@ Resources:
     DependsOn:
       - BastionHostSecurityGroup
     Properties:
-      ImageId: ami-07eda9385feb1e969
+      ImageId: ami-096b8af6e7e8fb927
       InstanceType: t2.micro
       KeyName: private-server-devops
       NetworkInterfaces:
