@@ -12,15 +12,13 @@ Parameters:
     Description: Environment Name
     Type: String
     Default: development
-  WebHosts:
-    Description: Number of we servers
-    Type: String
   KeyPairBastionHost:
     Description: SSH Key pair to access the bastion host
     Type: String
   RemoteAccessCIDR:
     Description: Remote CIDR allowed to access the bastion Hosts
     Type: String
+    Default: 80.224.88.115/32
 Resources:
   # IAM ROLE
   S3Role:
@@ -49,7 +47,7 @@ Resources:
             Action:
               - "s3:Get*"
               - "s3:List*"
-            Resource: *
+            Resource: "*"
       Roles:
         - Ref: "S3Role"
   ProfileWithRole:
@@ -109,18 +107,10 @@ Resources:
           FromPort: 80
           ToPort: 80
           CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
+        - CidrIp: 0.0.0.0/0
           FromPort: 22
           ToPort: 22
-          #CidrIp: 0.0.0.0/0
-          CidrIp:
-            !Sub "${BastionHost2.PrivateIp}/32"
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          #CidrIp: 0.0.0.0/0
-          CidrIp:
-            !Sub "${BastionHost2.PrivateIp}/32"
+          IpProtocol: tcp
   LaunchConfiguration:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:

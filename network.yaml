@@ -62,7 +62,7 @@ Resources:
       AmazonProvidedIpv6CidrBlock: true
       VpcId: !Ref VPC
 
-  # Private subnet 1
+  # Private subnet 2
   PrivateSubnet2:
     Type: AWS::EC2::Subnet
     Description: Private subnet two
@@ -84,7 +84,7 @@ Resources:
     Type: AWS::EC2::NatGateway
     Properties:
       AllocationId: !GetAtt NatGateway1ELasticIP.AllocationId
-      SubnetId: !Ref PrivateSubnet1
+      SubnetId: !Ref PublicSubnet1
   PrivateRouteTable1:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -102,7 +102,7 @@ Resources:
       RouteTableId: !Ref PrivateRouteTable1
       SubnetId: !Ref PrivateSubnet1
 
-  # Private subnet 2
+  # Private subnet 1
   PrivateSubnet1:
     Type: AWS::EC2::Subnet
     Description: Private subnet one
@@ -124,7 +124,7 @@ Resources:
     Type: AWS::EC2::NatGateway
     Properties:
       AllocationId: !GetAtt NatGateway2ELasticIP.AllocationId
-      SubnetId: !Ref PrivateSubnet2
+      SubnetId: !Ref PublicSubnet2
   PrivateRouteTable2:
     Type: AWS::EC2::RouteTable
     Properties:
