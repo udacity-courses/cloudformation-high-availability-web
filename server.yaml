@@ -12,51 +12,9 @@ Parameters:
     Description: Environment Name
     Type: String
     Default: development
-  KeyPairBastionHost:
-    Description: SSH Key pair to access the bastion host
-    Type: String
-  RemoteAccessCIDR:
-    Description: Remote CIDR allowed to access the bastion Hosts
-    Type: String
-    Default: 80.224.88.115/32
-Resources:
-  # IAM ROLE
-  S3Role:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: "Allow"
-            Principal:
-              Service:
-                - "ec2.amazonaws.com"
-            Action:
-              - "sts:AssumeRole"
-      ManagedPolicyArns:
-        - "arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM"
-      Path: /
-  RolePolicies:
-    Type: AWS::IAM::Policy
-    Properties:
-      PolicyName: "root"
-      PolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: "Allow"
-            Action:
-              - "s3:Get*"
-              - "s3:List*"
-            Resource: "*"
-      Roles:
-        - Ref: "S3Role"
-  ProfileWithRole:
-    Type: AWS::IAM::InstanceProfile
-    Properties:
-      Path: /
-      Roles:
-        - Ref: "S3Role"
 
+Resources:
+  # Security Groups
   LoadBalancerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -74,25 +32,10 @@ Resources:
           FromPort: 80
           ToPort: 80
           CidrIp: 0.0.0.0/0
-  LoadBalancerTargetGroup:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    Properties:
-      HealthCheckIntervalSeconds: 10
-      HealthCheckPath: /
-      HealthCheckProtocol: HTTP
-      HealthCheckPort: 80
-      HealthCheckTimeoutSeconds: 8
-      HealthyThresholdCount: 2
-      Port: 8080
-      Protocol: HTTP
-      UnhealthyThresholdCount: 5
-      VpcId:
-        Fn::ImportValue:
-          !Sub "${EnvironmentName}-VPCID"
   WebServerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Allow http traffic from local only
+      GroupDescription: Allow http/SSH traffic from local VPC only
       VpcId:
         Fn::ImportValue:
           !Sub "${EnvironmentName}-VPCID"
@@ -117,7 +60,7 @@ Resources:
       SecurityGroups:
         - Ref: WebServerSecurityGroup
       ImageId: ami-096b8af6e7e8fb927
-      InstanceType: t2.micro
+      InstanceType: t3.small
       IamInstanceProfile: !Ref ProfileWithRole
       BlockDeviceMappings:
         - DeviceName: "/dev/sdk"
@@ -132,7 +75,6 @@ Resources:
           aws s3 cp s3://udacity-demo-1/udacity.zip .
           unzip -o udacity.zip
           systemctl start apache2.service
-
   AutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
@@ -174,68 +116,59 @@ Resources:
       Conditions:
         - Field: path-pattern
           Values: [/]
-  # Bastion Hosts
-  BastionHostSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
+  LoadBalancerTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
-      GroupDescription: Security group for bastion hosts
-      GroupName: bastion-host-group
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: !Ref RemoteAccessCIDR
+      HealthCheckIntervalSeconds: 10
+      HealthCheckPath: /
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 8
+      HealthyThresholdCount: 2
+      Port: 80
+      Protocol: HTTP
+      UnhealthyThresholdCount: 5
       VpcId:
         Fn::ImportValue:
           !Sub "${EnvironmentName}-VPCID"
-  BastionHost1:
-    Type: AWS::EC2::Instance
-    Description: Jump box to connect via ssh to private servers
-    DependsOn:
-      - BastionHostSecurityGroup
+  # IAM ROLE
+  S3Role:
+    Type: AWS::IAM::Role
     Properties:
-      ImageId: ami-096b8af6e7e8fb927
-      InstanceType: t2.micro
-      KeyName: !Ref KeyPairBastionHost
-      NetworkInterfaces:
-        - AssociatePublicIpAddress: true
-          DeviceIndex: 0
-          GroupSet:
-            - Ref: BastionHostSecurityGroup
-          SubnetId:
-            Fn::ImportValue:
-              !Sub "${EnvironmentName}-PB-SN1"
-  BastionHost2:
-    Type: AWS::EC2::Instance
-    Description: Jump box to connect via ssh to private servers
-    DependsOn:
-      - BastionHostSecurityGroup
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "ec2.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM"
+      Path: /
+  RolePolicies:
+    Type: AWS::IAM::Policy
     Properties:
-      ImageId: ami-096b8af6e7e8fb927
-      InstanceType: t2.micro
-      KeyName: private-server-devops
-      NetworkInterfaces:
-        - AssociatePublicIpAddress: true
-          DeviceIndex: 0
-          GroupSet:
-            - Ref: BastionHostSecurityGroup
-          SubnetId:
-            Fn::ImportValue:
-              !Sub "${EnvironmentName}-PB-SN2"
+      PolicyName: "root"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Action:
+              - "s3:Get*"
+              - "s3:List*"
+            Resource: "*"
+      Roles:
+        - Ref: "S3Role"
+  ProfileWithRole:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: "/"
+      Roles:
+        - Ref: "S3Role"
 Outputs:
   Udagram:
     Description: Load Balancer DNS name
     Value: !Join ["",["http://", !GetAtt LoadBalancer.DNSName,]]
     Export:
       Name: !Sub ${EnvironmentName}-url
-  # Optional
-  BastionHost1Ip:
-    Description: Bastion host's public ip
-    Value: !GetAtt BastionHost1.PublicIp
-    Export:
-      Name: !Sub ${EnvironmentName}-Bastion-IP-1
-  BastionHost2Ip:
-    Description: Bastion host's public ip
-    Value: !GetAtt BastionHost2.PublicIp
-    Export:
-      Name: !Sub ${EnvironmentName}-Bastion-IP-2
