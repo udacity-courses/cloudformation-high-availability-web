@@ -28,11 +28,11 @@ Parameters:
   PublicSubnet1CIDR:
     Description: please enter the range (CIDR notation) for public subnet 2
     Type: String
-    Default: 10.0.3.0/24
+    Default: 10.0.2.0/24
   PublicSubnet2CIDR:
     Description: please enter the range (CIDR notation) for public subnet 2
     Type: String
-    Default: 10.0.4.0/24
+    Default: 10.0.3.0/24
 Resources:
   VPC:
     Type: AWS::EC2::VPC
