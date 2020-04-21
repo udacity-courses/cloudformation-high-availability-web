@@ -1,3 +1,6 @@
+# Diagram
+![Diagram](high-availability-web.png)
+
 ## Server specs
 
 You'll need to create a **Launch Configuration** for your application servers in order to deploy four servers, two located in each of your private subnets. The launch configuration will be used by an auto-scaling group.
